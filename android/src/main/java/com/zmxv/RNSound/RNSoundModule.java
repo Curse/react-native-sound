@@ -1,9 +1,12 @@
 package com.zmxv.RNSound;
 
+import android.content.Context;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaPlayer.OnErrorListener;
+import android.media.AudioManager;
 import android.net.Uri;
+import android.os.Vibrator;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Callback;
@@ -41,10 +44,6 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
       callback.invoke(e);
       return;
     }
-    try {
-      player.prepare();
-    } catch (Exception e) {
-    }
     this.playerPool.put(key, player);
     WritableMap props = Arguments.createMap();
     props.putDouble("duration", player.getDuration() * .001);
@@ -72,6 +71,16 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
       return;
     }
     if (player.isPlaying()) {
+      return;
+    }
+    AudioManager am = (AudioManager)this.context.getSystemService(Context.AUDIO_SERVICE);
+    if (am != null && am.getRingerMode() == AudioManager.RINGER_MODE_SILENT) {
+      return;
+    } else if (am != null && am.getRingerMode() == AudioManager.RINGER_MODE_VIBRATE) {
+      Vibrator vibe = (Vibrator)this.context.getSystemService(Context.VIBRATOR_SERVICE);
+      if (vibe != null) {
+        vibe.vibrate(150);
+      }
       return;
     }
     player.setOnCompletionListener(new OnCompletionListener() {
@@ -104,8 +113,11 @@ public class RNSoundModule extends ReactContextBaseJavaModule {
   public void stop(final Integer key) {
     MediaPlayer player = this.playerPool.get(key);
     if (player != null && player.isPlaying()) {
-      player.pause();
-      player.seekTo(0);
+      player.stop();
+      try {
+        player.prepare();
+      } catch (Exception e) {
+      }
     }
   }
 
